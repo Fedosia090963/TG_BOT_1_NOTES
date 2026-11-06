@@ -8,7 +8,7 @@ def get_main_keyboard() -> ReplyKeyboardMarkup:
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="/add"), KeyboardButton(text="/list")],
-            [KeyboardButton(text="/list_csv")],
+            [KeyboardButton(text="/list_csv"), KeyboardButton(text="/delete")],
         ],
         resize_keyboard=True,
     )

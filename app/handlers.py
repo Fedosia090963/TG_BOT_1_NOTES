@@ -16,6 +16,10 @@ class AddTaskState(StatesGroup):
     waiting_for_task_text = State()
 
 
+class DeleteTaskState(StatesGroup):
+    waiting_for_task_id = State()
+
+
 class RegisterUserState(StatesGroup):
     waiting_for_name = State()
 
@@ -30,7 +34,7 @@ async def command_start(message: Message, state: FSMContext) -> None:
     """Приветствует пользователя и показывает доступные команды."""
     await message.answer(
         "Привет! Я бот для командной работы.\n"
-        "Используйте /add, /list или /list_csv.",
+        "Используйте /add, /list, /list_csv или /delete.",
         reply_markup=get_main_keyboard(),
     )
 
@@ -82,6 +86,34 @@ async def add_task_from_message(message: Message, state: FSMContext) -> None:
     """Сохраняет задачу, полученную следующим сообщением."""
     await save_task(message, message.text or "")
     await state.clear()
+
+
+@router.message(Command("delete"))
+async def command_delete(message: Message, state: FSMContext) -> None:
+    """Запрашивает номер задачи для удаления."""
+    await message.answer("Введите номер заметки, которую нужно удалить (посмотрите его в /list).")
+    await state.set_state(DeleteTaskState.waiting_for_task_id)
+
+
+@router.message(DeleteTaskState.waiting_for_task_id)
+async def delete_task_from_message(message: Message, state: FSMContext) -> None:
+    """Удаляет задачу по указанному номеру."""
+    task_id_text = (message.text or "").strip()
+    if not task_id_text.isdecimal() or int(task_id_text) < 1:
+        await message.answer("Введите положительный номер заметки из списка /list.")
+        return
+
+    database = get_database()
+    try:
+        deleted = database.delete_task(int(task_id_text))
+    finally:
+        database.close()
+
+    await state.clear()
+    if deleted:
+        await message.answer(f"Заметка №{task_id_text} удалена.")
+    else:
+        await message.answer(f"Заметка №{task_id_text} не найдена.")
 
 
 async def save_task(message: Message, task_text: str) -> None:

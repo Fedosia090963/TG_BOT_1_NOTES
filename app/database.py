@@ -104,6 +104,15 @@ class Database:
         self.close()
         return [dict(row) for row in rows]
 
+    def delete_task(self, task_id: int) -> bool:
+        """Удаляет задачу по идентификатору и сообщает, была ли она найдена."""
+        connection = self.connect()
+        cursor = connection.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+        connection.commit()
+        deleted = cursor.rowcount > 0
+        self.close()
+        return deleted
+
     def export_tasks_to_csv(self) -> str:
         """Формирует содержимое CSV-таблицы со всеми задачами."""
         tasks = self.get_all_tasks()

@@ -54,6 +54,14 @@ class DatabaseTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.database.add_user("12345", " ")
 
+    def test_delete_task(self):
+        self.database.init_db()
+        task_id = self.database.add_task("Удалить эту заметку", "alice")
+
+        self.assertTrue(self.database.delete_task(task_id))
+        self.assertFalse(self.database.delete_task(task_id))
+        self.assertEqual(self.database.get_all_tasks(), [])
+
     def test_export_tasks_to_csv(self):
         self.database.init_db()
         self.database.add_task("Первая задача", "alice")
