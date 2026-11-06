@@ -39,8 +39,43 @@ class Database:
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                telegram_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL
+            )
+            """
+        )
         connection.commit()
         self.close()
+
+    def add_user(self, telegram_id: str, name: str) -> None:
+        """Сохраняет имя пользователя Telegram."""
+        if not name.strip():
+            raise ValueError("Имя пользователя не может быть пустым.")
+
+        connection = self.connect()
+        connection.execute(
+            """
+            INSERT INTO users (telegram_id, name)
+            VALUES (?, ?)
+            ON CONFLICT(telegram_id) DO UPDATE SET name = excluded.name
+            """,
+            (telegram_id, name.strip()),
+        )
+        connection.commit()
+        self.close()
+
+    def get_user_name(self, telegram_id: str) -> str | None:
+        """Возвращает сохранённое имя пользователя или None."""
+        connection = self.connect()
+        row = connection.execute(
+            "SELECT name FROM users WHERE telegram_id = ?",
+            (telegram_id,),
+        ).fetchone()
+        self.close()
+        return row["name"] if row is not None else None
 
     def add_task(self, text: str, user: str) -> int:
         """Добавляет новую задачу и возвращает её идентификатор."""

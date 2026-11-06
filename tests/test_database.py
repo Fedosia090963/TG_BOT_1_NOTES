@@ -34,6 +34,26 @@ class DatabaseTests(unittest.TestCase):
         self.assertEqual(tasks[0]["text"], "Сделать домашнее задание")
         self.assertEqual(tasks[0]["user"], "test_user")
 
+    def test_add_and_get_user_name(self):
+        self.database.init_db()
+        self.database.add_user("12345", "Алексей")
+
+        self.assertEqual(self.database.get_user_name("12345"), "Алексей")
+        self.assertIsNone(self.database.get_user_name("67890"))
+
+    def test_add_user_updates_existing_name(self):
+        self.database.init_db()
+        self.database.add_user("12345", "Алексей")
+        self.database.add_user("12345", "Алекс")
+
+        self.assertEqual(self.database.get_user_name("12345"), "Алекс")
+
+    def test_add_user_rejects_empty_name(self):
+        self.database.init_db()
+
+        with self.assertRaises(ValueError):
+            self.database.add_user("12345", " ")
+
     def test_export_tasks_to_csv(self):
         self.database.init_db()
         self.database.add_task("Первая задача", "alice")

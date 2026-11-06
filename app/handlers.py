@@ -16,19 +16,51 @@ class AddTaskState(StatesGroup):
     waiting_for_task_text = State()
 
 
+class RegisterUserState(StatesGroup):
+    waiting_for_name = State()
+
+
 def get_database() -> Database:
     """Создаёт объект базы данных."""
     return Database("tasks.db")
 
 
 @router.message(CommandStart())
-async def command_start(message: Message) -> None:
+async def command_start(message: Message, state: FSMContext) -> None:
     """Приветствует пользователя и показывает доступные команды."""
     await message.answer(
         "Привет! Я бот для командной работы.\n"
         "Используйте /add, /list или /list_csv.",
         reply_markup=get_main_keyboard(),
     )
+
+    database = get_database()
+    try:
+        user_name = database.get_user_name(str(message.from_user.id))
+    finally:
+        database.close()
+
+    if user_name is None:
+        await message.answer("Введите Ваше имя")
+        await state.set_state(RegisterUserState.waiting_for_name)
+
+
+@router.message(RegisterUserState.waiting_for_name)
+async def register_user(message: Message, state: FSMContext) -> None:
+    """Сохраняет имя нового пользователя."""
+    name = (message.text or "").strip()
+    if not name:
+        await message.answer("Имя не может быть пустым. Введите Ваше имя")
+        return
+
+    database = get_database()
+    try:
+        database.add_user(str(message.from_user.id), name)
+    finally:
+        database.close()
+
+    await state.clear()
+    await message.answer(f"Приятно познакомиться, {name}!")
 
 
 @router.message(Command("add"))
@@ -56,7 +88,9 @@ async def save_task(message: Message, task_text: str) -> None:
     """Сохраняет задачу и сообщает пользователю результат."""
     database = get_database()
     try:
-        task_id = database.add_task(task_text, str(message.from_user.id))
+        user_id = str(message.from_user.id)
+        user_name = database.get_user_name(user_id) or user_id
+        task_id = database.add_task(task_text, user_name)
     except ValueError:
         await message.answer("Текст задачи не может быть пустым.")
         return
